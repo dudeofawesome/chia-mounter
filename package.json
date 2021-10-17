@@ -1,0 +1,20 @@
+{
+  "name": "chia-mounter",
+  "short_name": "Mount your Chia drives automatically",
+  "long_name": "Chia Drive Mounter",
+  "version": "0.0.1",
+  "description": "Mount your Chia drives automatically",
+  "homepage": "https://github.com/dudeofawesome/chia-mounter",
+  "repository": "https://github.com/dudeofawesome/chia-mounter.git",
+  "private": true,
+  "author": {
+    "name": "Louis Orleans",
+    "email": "louis@orleans.io",
+    "url": "https://orleans.io"
+  },
+  "license": "none",
+  "devDependencies": {
+    "@prettier/plugin-ruby": "^1.6.1",
+    "prettier": "^2.4.1"
+  }
+}
