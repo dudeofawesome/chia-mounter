@@ -42,5 +42,9 @@ puts devs
 
 # mount drives
 devs.each_with_index do |dev, i|
-  puts `mount "#{dev[:path]}" "#{mount_dir}/#{mount_name_base}#{'%02d' % i}"`
+  puts "Mounting #{dev[:path]}"
+  out = `mount "#{dev[:path]}" "#{mount_dir}/#{mount_name_base}#{'%02d' % i}"`
+  if out.strip != ''
+    puts out
+  end
 end
