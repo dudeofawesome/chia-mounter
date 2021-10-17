@@ -59,7 +59,12 @@ starting_index =
 # mount drives
 devs_to_mount.each_with_index do |dev, i|
   puts "Mounting #{dev[:path]}"
-  out =
-    `mount "#{dev[:path]}" "#{mount_dir}/#{mount_name_base}#{'%02d' % (i + starting_index)}"`
+
+  mountpoint =
+    File.join(mount_dir, "#{mount_name_base}#{'%02d' % (i + starting_index)}")
+
+  Dir.mkdir(mountpoint) if !File.exist?(mountpoint)
+
+  out = `mount "#{dev[:path]}" "#{mountpoint}"`
   puts out if out.strip != ''
 end
