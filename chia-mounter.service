@@ -1,0 +1,13 @@
+[Unit]
+Description=Chia mounter
+# Requires=docker.service
+# After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/home/dudeofawesome/Github/chia-mounter.rb
+Restart=no
+User=root
+
+[Install]
+WantedBy=docker.service
