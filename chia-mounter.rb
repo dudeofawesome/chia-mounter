@@ -1,19 +1,25 @@
 #!/usr/bin/env ruby
 
+require 'json'
+
 mount_dir = '/mnt'
 mount_name_base = 'chia-plots-'
 
 # find all drives
 all_block_devs =
-  `lsblk --noheadings --nodeps --output NAME,MODEL,SERIAL,ROTA`.split(/\n/)
+  JSON.parse(`lsblk --json --output NAME,LABEL,MODEL,SERIAL,ROTA,MOUNTPOINT`)
 
 devs =
-  all_block_devs
+  all_block_devs['blockdevices']
+    .select do |dev|
+      # check if partition has chia label
+      false if dev['children'].nil?
+      dev['children'].any? { |part| !(part['label'] =~ /chia/).nil? }
+    end
     .map do |dev|
-      name, model, serial, rotational = dev.strip.split(/ +/)
-
+      # transform data
       interface =
-        case name
+        case dev['name']
         when /^s/
           'ata'
         when /^nvme/
@@ -22,29 +28,38 @@ devs =
           'unknown_interface'
         end
 
+      name = "#{interface}-#{dev['model']}_#{dev['serial']}".gsub(/ /, '_')
+      partition =
+        dev['children'].find_index { |part| !(part['label'] =~ /chia/).nil? }
+
       {
-        path: "/dev/disk/by-id/#{interface}-#{model}_#{serial}-part1",
-        ssd: rotational.to_i == 0
+        path: "/dev/disk/by-id/#{name}-part#{partition + 1}",
+        mountpoint: dev['children'][partition]['mountpoint'],
+        mountpoint_num:
+          (dev['children'][partition]['mountpoint'].match(/\d+$/) || [])[0]
+            &.to_i,
+        ssd: !dev['rota'],
       }
-    end
-    .select do |dev|
-      # check if drive is for chia
-      puts "Checking dev #{dev[:path]}"
-      label = `btrfs fi label "#{dev[:path]}"`
-      !(label =~ /chia/).nil?
     end
     .sort do |a, b|
       # sort drives by SSD
       b[:ssd] ? 1 : 0 <=> a[:ssd] ? 1 : 0
     end
 
-puts devs
+devs_to_mount = devs.select { |dev| dev[:mountpoint].nil? }
+mounted_devs = devs.select { |dev| !dev[:mountpoint].nil? }
+
+starting_index =
+  mounted_devs.max do |a, b|
+    (a[:mountpoint_num] || 0) <=> (b[:mountpoint_num] || 0)
+  end[
+    :mountpoint_num
+  ]
 
 # mount drives
-devs.each_with_index do |dev, i|
+devs_to_mount.each_with_index do |dev, i|
   puts "Mounting #{dev[:path]}"
-  out = `mount "#{dev[:path]}" "#{mount_dir}/#{mount_name_base}#{'%02d' % i}"`
-  if out.strip != ''
-    puts out
-  end
+  out =
+    `mount "#{dev[:path]}" "#{mount_dir}/#{mount_name_base}#{'%02d' % (i + starting_index)}"`
+  puts out if out.strip != ''
 end
